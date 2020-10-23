@@ -1,6 +1,7 @@
 <?php
 namespace Lokalkoder\Routee;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 
@@ -34,10 +35,18 @@ class RouteeSource
      */
     public function routeCollection(): Collection
     {
-        collect(explode(',', $this->config['source']))->each(function ($source) {
-            $json = \json_decode(file_get_contents($source), true);
+        collect(explode(',', Arr::get($this->config, 'source', [])))->each(function ($url) {
+            if (filter_var($url, FILTER_VALIDATE_URL)) {
+                $source = $url . '/routee.json';
+                
+                if (($fileSource = file_get_contents($source)) !== false) {
+                    $json = \json_decode($fileSource, true);
 
-            $this->routeList = $this->routeList->merge($json);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $this->routeList = $this->routeList->merge($json);
+                    }
+                }
+            }
         });
         
         return $this->routeList;
